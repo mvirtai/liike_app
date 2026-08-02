@@ -1,0 +1,182 @@
+version: '3'
+
+vars:
+  PHASE: '1'
+  SERVER_CMD: './cmd/server/main.go'
+  BINARY_NAME: 'bin/server'
+  PR_STORY_DIR: '.pr_stories'
+
+tasks:
+  default:
+    desc: 'List available commands'
+    cmds:
+      - task --list
+
+  dev:
+    desc: 'Run the development server'
+    cmds:
+      - go run {{.SERVER_CMD}}
+
+  build:
+    desc: 'Build the server binary'
+    cmds:
+      - mkdir -p bin
+      - go build -o {{.BINARY_NAME}} {{.SERVER_CMD}}
+      - echo "[TASK] Binary built successfully at {{.BINARY_NAME}}"
+
+  test:
+    desc: 'Run all unit tests'
+    cmds:
+      - go test -v ./...
+
+  test:coverage:
+    desc: 'Run unit tests with coverage analysis'
+    cmds:
+      - go test -coverprofile=coverage.out ./...
+      - go tool cover -func=coverage.out
+      - echo "[TASK] Test coverage report generated!"
+
+  check:
+    desc: 'Run static analysis (vet) and unit tests'
+    cmds:
+      - go vet ./...
+      - go test -cover ./...
+      - echo "[TASK] All checks passed cleanly!"
+
+  clean:
+    desc: 'Clean build artifacts'
+    cmds:
+      - rm -rf bin/
+      - echo "[TASK] Cleaned build artifacts."
+
+  commit:
+    desc: 'Stage changes and create a formatted conventional commit. Usage: task commit TYPE=feat SCOPE=setup MSG="add config loader" [FILES="file1 file2"]'
+    cmds:
+      - |
+        VALID_TYPES="feat fix docs style refactor perf test build ci chore"
+        TYPE="{{.TYPE}}"
+        SCOPE="{{.SCOPE}}"
+        MSG="{{.MSG}}"
+        FILES="{{.FILES}}"
+
+        if [ -z "$FILES" ]; then
+          FILES="."
+        fi
+
+        if [ -z "$TYPE" ] || [ -z "$SCOPE" ] || [ -z "$MSG" ]; then
+          echo "ERROR: Parameters TYPE, SCOPE, and MSG are required!"
+          echo "Usage: task commit TYPE=feat SCOPE=setup MSG=\"add configuration loader\" [FILES=\"cmd/ internal/config/config.go\"]"
+          echo "Allowed TYPE values: $VALID_TYPES"
+          echo "Example SCOPE values: setup, config, handler, server, test, docs, db, auth"
+          exit 1
+        fi
+
+        IS_VALID=0
+        for t in $VALID_TYPES; do
+          if [ "$t" = "$TYPE" ]; then
+            IS_VALID=1
+            break
+          fi
+        done
+
+        if [ $IS_VALID -eq 0 ]; then
+          echo "ERROR: Invalid commit type '$TYPE'."
+          echo "Allowed TYPE values are: $VALID_TYPES"
+          exit 1
+        fi
+
+        FULL_MSG="${TYPE}(${SCOPE}): ${MSG}"
+
+        echo "[TASK] Formatted commit message: '$FULL_MSG'"
+        echo "[TASK] Staging files: '$FILES'"
+        task check
+        git add $FILES
+        git commit -m "$FULL_MSG"
+        echo "[TASK] Conventional commit created successfully: '$FULL_MSG'"
+
+  pr:
+    desc: 'Create or print PR body using PR Story file. Usage: task pr [PHASE=1]'
+    vars:
+      STORY_FILE: '{{.PR_STORY_DIR}}/PR_STORY_PHASE_{{.PHASE}}.md'
+    cmds:
+      - |
+        if [ ! -f "{{.STORY_FILE}}" ]; then
+          echo "ERROR: PR Story file {{.STORY_FILE}} not found!"
+          exit 1
+        fi
+      - echo "[TASK] Preparing PR creation using {{.STORY_FILE}}..."
+      - |
+        if command -v gh >/dev/null 2>&1; then
+          gh pr create --title "feat(phase-{{.PHASE}}): complete Phase {{.PHASE}} deliverables" --body-file "{{.STORY_FILE}}"
+        else
+          echo "[INFO] gh CLI not found in PATH. You can create the PR using the content of {{.STORY_FILE}}:"
+          echo "--------------------------------------------------------"
+          cat "{{.STORY_FILE}}"
+          echo "--------------------------------------------------------"
+        fi
+
+  pr:story:
+    desc: 'Generate a blank PR Story template for a new phase. Usage: task pr:story PHASE=2'
+    vars:
+      STORY_FILE: '{{.PR_STORY_DIR}}/PR_STORY_PHASE_{{.PHASE}}.md'
+    cmds:
+      - mkdir -p {{.PR_STORY_DIR}}
+      - |
+        if [ -f "{{.STORY_FILE}}" ]; then
+          echo "WARNING: {{.STORY_FILE}} already exists!"
+          exit 0
+        fi
+        cat << 'EOF' > {{.STORY_FILE}}
+        # PR Story: Phase {{.PHASE}} - [Phase Name]
+
+        **PR Title:** `feat(scope): description`  
+        **Phase:** {{.PHASE}}  
+        **Status:** Draft / Ready for Review  
+        **Date:** {{now | date "2006-01-02"}}  
+        **Target Branch:** `main`  
+
+        ---
+
+        ## 🎯 1. Summary & Objective
+
+        [High-level summary of changes and business value]
+
+        ---
+
+        ## 📂 2. Key Changes & File Structure
+
+        ### Summary of Modified/Created Files
+        - [file basename](file:///absolute/path): Description
+
+        ---
+
+        ## 📐 3. Architecture & System Diagrams
+
+        ```mermaid
+        graph TD
+            A[Client] --> B[Handler]
+        ```
+
+        ---
+
+        ## 🧪 4. Demonstration of Results & Verification
+
+        ```bash
+        # Command execution
+        ```
+
+        ---
+
+        ## ✅ 5. Verification Matrix & Acceptance Criteria
+
+        | Criteria | Status | Details |
+        | :--- | :---: | :--- |
+        | Initial implementation | ⏳ PENDING | TBD |
+
+        ---
+
+        ## 🚀 6. Next Steps & Roadmap
+
+        - [Next phase tasks]
+        EOF
+        echo "[TASK] Created blank PR Story template at {{.STORY_FILE}}"

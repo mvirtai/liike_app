@@ -1,0 +1,19 @@
+# Binaries & build artifacts
+bin/
+*.exe
+*.exe;
+*.dll
+*.so
+*.dylib
+
+# Test coverage reports
+coverage.out
+*.coverprofile
+
+# Environment variables & local configuration
+.env
+.env.local
+
+# OS generated files
+.DS_Store
+Thumbs.db
