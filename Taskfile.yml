@@ -95,7 +95,7 @@ tasks:
         echo "[TASK] Conventional commit created successfully: '$FULL_MSG'"
 
   pr:
-    desc: 'Create or print PR body using PR Story file. Usage: task pr [PHASE=1]'
+    desc: 'Push branch and create or print PR body using PR Story file. Usage: task pr [PHASE=1]'
     vars:
       STORY_FILE: '{{.PR_STORY_DIR}}/PR_STORY_PHASE_{{.PHASE}}.md'
     cmds:
@@ -104,6 +104,8 @@ tasks:
           echo "ERROR: PR Story file {{.STORY_FILE}} not found!"
           exit 1
         fi
+      - echo "[TASK] Pushing commits to remote repository..."
+      - git push origin HEAD || git push || echo "[INFO] Proceeding without push if remote is not configured."
       - echo "[TASK] Preparing PR creation using {{.STORY_FILE}}..."
       - |
         if command -v gh >/dev/null 2>&1; then
