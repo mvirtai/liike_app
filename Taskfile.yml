@@ -95,25 +95,54 @@ tasks:
         echo "[TASK] Conventional commit created successfully: '$FULL_MSG'"
 
   pr:
-    desc: 'Push branch and create or print PR body using PR Story file. Usage: task pr [PHASE=1]'
+    desc: 'Push branch and create PR using PR Story metadata. Usage: task pr [PHASE=1]'
     vars:
       STORY_FILE: '{{.PR_STORY_DIR}}/PR_STORY_PHASE_{{.PHASE}}.md'
     cmds:
       - |
-        if [ ! -f "{{.STORY_FILE}}" ]; then
-          echo "ERROR: PR Story file {{.STORY_FILE}} not found!"
+        STORY_FILE="{{.STORY_FILE}}"
+        if [ ! -f "$STORY_FILE" ]; then
+          echo "ERROR: PR Story file $STORY_FILE not found!"
           exit 1
         fi
-      - echo "[TASK] Pushing commits to remote repository..."
-      - git push origin HEAD || git push || echo "[INFO] Proceeding without push if remote is not configured."
-      - echo "[TASK] Preparing PR creation using {{.STORY_FILE}}..."
-      - |
+
+        TITLE_LINE=$(grep -E '^\*\*PR Title:\*\*' "$STORY_FILE" | head -n 1)
+        PR_TITLE=$(echo "$TITLE_LINE" | awk -F'`' '{print $2}')
+        if [ -z "$PR_TITLE" ]; then
+          PR_TITLE="feat(phase-{{.PHASE}}): complete Phase {{.PHASE}} deliverables"
+        fi
+
+        BRANCH_LINE=$(grep -E '^\*\*(Branch|Branch Name):\*\*' "$STORY_FILE" | head -n 1)
+        PR_BRANCH=$(echo "$BRANCH_LINE" | awk -F'`' '{print $2}')
+        if [ -z "$PR_BRANCH" ]; then
+          PR_TYPE=$(echo "$PR_TITLE" | sed -E 's/^([a-z]+)\(?([^)]*)\)?:.*/\1/')
+          PR_SCOPE=$(echo "$PR_TITLE" | sed -E 's/^([a-z]+)\(?([^)]*)\)?:.*/\2/')
+          if [ -n "$PR_SCOPE" ]; then
+            PR_BRANCH="${PR_TYPE}/${PR_SCOPE}"
+          else
+            PR_BRANCH="feat/phase-{{.PHASE}}"
+          fi
+        fi
+
+        echo "[TASK] Parsed PR Title: '$PR_TITLE'"
+        echo "[TASK] Parsed Branch Name: '$PR_BRANCH'"
+
+        CURR_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+        if [ "$CURR_BRANCH" != "$PR_BRANCH" ]; then
+          echo "[INFO] Switching to branch '$PR_BRANCH'..."
+          git checkout -b "$PR_BRANCH" 2>/dev/null || git checkout "$PR_BRANCH"
+        fi
+
+        echo "[TASK] Pushing branch '$PR_BRANCH' to remote..."
+        git push -u origin "$PR_BRANCH" || echo "[INFO] Proceeding without push if remote is not configured."
+
+        echo "[TASK] Creating PR using $STORY_FILE..."
         if command -v gh >/dev/null 2>&1; then
-          gh pr create --title "feat(phase-{{.PHASE}}): complete Phase {{.PHASE}} deliverables" --body-file "{{.STORY_FILE}}"
+          gh pr create --title "$PR_TITLE" --body-file "$STORY_FILE" --base main --head "$PR_BRANCH"
         else
-          echo "[INFO] gh CLI not found in PATH. You can create the PR using the content of {{.STORY_FILE}}:"
+          echo "[INFO] gh CLI not found in PATH. You can create the PR using the content of $STORY_FILE:"
           echo "--------------------------------------------------------"
-          cat "{{.STORY_FILE}}"
+          cat "$STORY_FILE"
           echo "--------------------------------------------------------"
         fi
 
@@ -132,6 +161,7 @@ tasks:
         # PR Story: Phase {{.PHASE}} - [Phase Name]
 
         **PR Title:** `feat(scope): description`  
+        **Branch:** `feat/phase-{{.PHASE}}-[feature-name]`  
         **Phase:** {{.PHASE}}  
         **Status:** Draft / Ready for Review  
         **Date:** {{now | date "2006-01-02"}}  

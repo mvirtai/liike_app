@@ -1,6 +1,7 @@
 # PR Story: Phase 1 - Project Setup & Foundation
 
 **PR Title:** `feat(backend): initialize layered Go project structure, configuration, and health check API`  
+**Branch:** `feat/phase-1-project-setup`  
 **Phase:** 1 (Project Setup & Go Backend Foundation)  
 **Status:** Ready for Review / Approved  
 **Date:** 2026-08-02  
