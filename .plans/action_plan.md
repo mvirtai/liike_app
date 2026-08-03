@@ -24,11 +24,11 @@ Teknologiat: **Go (Backend)**, **SQLite (Tietokanta)**, **React + TypeScript (Fr
 
 ## 🗺️ Vaihejako (Roadmap)
 
-- [ ] **Vaihe 1: Projektirakenne & Go-backendin perustus** *(Meneillään)*
+- [x] **Vaihe 1: Projektirakenne & Go-backendin perustus** *(Valmis)*
   - Go-moduulin alustus (`go mod init liike_app`).
   - Arkkitehtuurirakenne (`cmd/server`, `internal/config`, `internal/domain`, `internal/repository`, `internal/service`, `internal/handler`).
   - HTTP-palvelimen käynnistys ja terveystarkastus-endpoint (`GET /api/v1/health`).
-- [ ] **Vaihe 2: Tietokanta-arkkitehtturi, Migraatiot & Käyttäjä/Laji-skeemat**
+- [ ] **Vaihe 2: Tietokanta-arkkitehtuuri, Migraatiot & Käyttäjä/Laji-skeemat** *(Meneillään - [phase_2_database_setup.md](file:///home/vivaldev/code/liike_app/.plans/phase_2_database_setup.md))*
   - SQLite-yhteyspooli (`modernc.org/sqlite`).
   - Migraatiotyökalu ja tietokantataulut: `users`, `exercise_types`, `workouts`, `workout_sets`, `archery_scores`.
 - [ ] **Vaihe 3: Käyttäjähallinta & JWT-Autentikaatio (API)**
