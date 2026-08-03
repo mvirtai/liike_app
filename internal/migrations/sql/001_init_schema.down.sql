@@ -1,0 +1,5 @@
+DROP TABLE IF EXISTS archery_scores;
+DROP TABLE IF EXISTS workout_sets;
+DROP TABLE IF EXISTS workouts;
+DROP TABLE IF EXISTS exercise_types;
+DROP TABLE IF EXISTS users;
