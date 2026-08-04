@@ -5,11 +5,12 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
-	"errors"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
+	"liike_app/internal/middleware"
 	"liike_app/internal/repository"
 	service "liike_app/internal/services"
 
@@ -329,7 +330,10 @@ func TestAuthHandler_Login(t *testing.T) {
 					Password: tt.password,
 				})
 				if err != nil {
-					t.Fatalf("Login-inputin JSON-muunnos epäonnistui: %v", err)
+					t.Fatalf(
+						"Login-inputin JSON-muunnos epäonnistui: %v",
+						err,
+					)
 				}
 
 				body = string(bodyBytes)
@@ -379,7 +383,7 @@ func TestAuthHandler_Login(t *testing.T) {
 
 			if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
 				t.Fatalf(
-					"onnistuneen vastauksen JSON:n lukeminen epäonnistui: %v",
+					"onnistuneen Login-vastauksen JSON:n lukeminen epäonnistui: %v",
 					err,
 				)
 			}
@@ -402,7 +406,187 @@ func TestAuthHandler_Login(t *testing.T) {
 	}
 }
 
-// --- HTTP response helpers ---
+// --- AuthHandler.Me ---
+
+func TestAuthHandler_Me(t *testing.T) {
+	t.Run("success", func(t *testing.T) {
+		authSvc := newTestAuthService(t)
+		handler := NewAuthHandler(authSvc)
+
+		registerResponse, err := authSvc.Register(
+			context.Background(),
+			service.RegisterInput{
+				Email:    "me@example.com",
+				Name:     "Me Test User",
+				Password: "password123",
+			},
+		)
+		if err != nil {
+			t.Fatalf(
+				"testikäyttäjän rekisteröinti epäonnistui: %v",
+				err,
+			)
+		}
+
+		// Simuloidaan AuthMiddlewaren toimintaa:
+		// middleware lisää käyttäjän ID:n requestin contextiin.
+		ctx := context.WithValue(
+			context.Background(),
+			middleware.UserIDKey,
+			registerResponse.User.ID,
+		)
+
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"/api/v1/auth/me",
+			nil,
+		).WithContext(ctx)
+
+		recorder := httptest.NewRecorder()
+
+		handler.Me(recorder, request)
+
+		if recorder.Code != http.StatusOK {
+			t.Fatalf(
+				"odotettu HTTP-status %d, saatiin %d",
+				http.StatusOK,
+				recorder.Code,
+			)
+		}
+
+		if contentType := recorder.Header().Get("Content-Type"); contentType != "application/json" {
+			t.Errorf(
+				"odotettu Content-Type application/json, saatiin %q",
+				contentType,
+			)
+		}
+
+		var response map[string]any
+
+		if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+			t.Fatalf(
+				"Me-vastauksen JSON:n lukeminen epäonnistui: %v",
+				err,
+			)
+		}
+
+		if response["id"] != registerResponse.User.ID {
+			t.Errorf(
+				"odotettu käyttäjän ID '%s', saatiin '%v'",
+				registerResponse.User.ID,
+				response["id"],
+			)
+		}
+
+		if response["email"] != "me@example.com" {
+			t.Errorf(
+				"odotettu email 'me@example.com', saatiin '%v'",
+				response["email"],
+			)
+		}
+
+		if response["name"] != "Me Test User" {
+			t.Errorf(
+				"odotettu nimi 'Me Test User', saatiin '%v'",
+				response["name"],
+			)
+		}
+
+		// PasswordHash on json:"-":n ansiosta piilotettu.
+		if strings.Contains(recorder.Body.String(), "password_hash") ||
+			strings.Contains(recorder.Body.String(), "PasswordHash") {
+			t.Error(
+				"Me-vastauksessa ei saa olla password_hash-kenttää",
+			)
+		}
+	})
+
+	t.Run("missing user id in context", func(t *testing.T) {
+		authSvc := newTestAuthService(t)
+		handler := NewAuthHandler(authSvc)
+
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"/api/v1/auth/me",
+			nil,
+		)
+
+		recorder := httptest.NewRecorder()
+
+		handler.Me(recorder, request)
+
+		if recorder.Code != http.StatusUnauthorized {
+			t.Fatalf(
+				"odotettu HTTP-status %d, saatiin %d",
+				http.StatusUnauthorized,
+				recorder.Code,
+			)
+		}
+
+		var response map[string]string
+
+		if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+			t.Fatalf(
+				"virhevastauksen JSON:n lukeminen epäonnistui: %v",
+				err,
+			)
+		}
+
+		if response["error"] != "autentikaatio puuttuu" {
+			t.Errorf(
+				"odotettu error 'autentikaatio puuttuu', saatiin '%s'",
+				response["error"],
+			)
+		}
+	})
+
+	t.Run("user not found", func(t *testing.T) {
+		authSvc := newTestAuthService(t)
+		handler := NewAuthHandler(authSvc)
+
+		ctx := context.WithValue(
+			context.Background(),
+			middleware.UserIDKey,
+			"non-existent-user-id",
+		)
+
+		request := httptest.NewRequest(
+			http.MethodGet,
+			"/api/v1/auth/me",
+			nil,
+		).WithContext(ctx)
+
+		recorder := httptest.NewRecorder()
+
+		handler.Me(recorder, request)
+
+		if recorder.Code != http.StatusNotFound {
+			t.Fatalf(
+				"odotettu HTTP-status %d, saatiin %d",
+				http.StatusNotFound,
+				recorder.Code,
+			)
+		}
+
+		var response map[string]string
+
+		if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
+			t.Fatalf(
+				"virhevastauksen JSON:n lukeminen epäonnistui: %v",
+				err,
+			)
+		}
+
+		if response["error"] != "käyttäjää ei löydy" {
+			t.Errorf(
+				"odotettu error 'käyttäjää ei löydy', saatiin '%s'",
+				response["error"],
+			)
+		}
+	})
+}
+
+// --- writeJSON ---
 
 func TestWriteJSON(t *testing.T) {
 	recorder := httptest.NewRecorder()
@@ -433,7 +617,10 @@ func TestWriteJSON(t *testing.T) {
 	var response map[string]string
 
 	if err := json.NewDecoder(recorder.Body).Decode(&response); err != nil {
-		t.Fatalf("JSON-vastauksen lukeminen epäonnistui: %v", err)
+		t.Fatalf(
+			"JSON-vastauksen lukeminen epäonnistui: %v",
+			err,
+		)
 	}
 
 	if response["message"] != "created" {
@@ -443,7 +630,3 @@ func TestWriteJSON(t *testing.T) {
 		)
 	}
 }
-
-// Estetään mahdollinen käyttämätön errors-importti,
-// jos testit myöhemmin muuttuvat.
-var _ = errors.Is
