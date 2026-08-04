@@ -36,12 +36,14 @@ func AuthMiddleware(authSvc *service.AuthService) func(http.Handler) http.Handle
 			parts := strings.SplitN(authHeader, " ", 2)
 			if len(parts) != 2 || parts[0] != "Bearer" {
 				writeJSONError(w, "virheellinen Authorization-otsikkomuoto", http.StatusUnauthorized)
+				return
 			}
 
 			// 3. Validoidaan token
 			claims, err := authSvc.ValidateToken(parts[1])
 			if err != nil {
 				writeJSONError(w, "virheellinen tai vanhentunut token", http.StatusUnauthorized)
+				return
 			}
 
 			// 4. Lisätään käyttäjätiedot kontekstiin
