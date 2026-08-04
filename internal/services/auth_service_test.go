@@ -615,34 +615,6 @@ func TestAuthService_ValidateToken_Expired(t *testing.T) {
 	}
 }
 
-// --- AuthService.GetUserByID ---
-
-func TestAuthService_GetUserByID(t *testing.T) {
-	svc := newTestAuthService(t)
-
-	createTestUser(t, svc.repo)
-
-	user, err := svc.GetUserByID(
-		context.Background(),
-		"user-id-that-does-not-exist",
-	)
-
-	if err == nil {
-		t.Fatal("odotettiin käyttäjän puuttumisesta virhettä")
-	}
-
-	if user != nil {
-		t.Error("käyttäjän pitäisi olla nil, kun sitä ei löydy")
-	}
-
-	if !errors.Is(err, repository.ErrUserNotFound) {
-		t.Errorf(
-			"odotettiin ErrUserNotFound, saatiin %v",
-			err,
-		)
-	}
-}
-
 // --- Helpers ---
 
 func mustGenerateTestToken(t *testing.T, svc *AuthService) string {
@@ -659,4 +631,53 @@ func mustGenerateTestToken(t *testing.T, svc *AuthService) string {
 	}
 
 	return token
+}
+
+func TestAuthService_GetUserByID(t *testing.T) {
+	svc := newTestAuthService(t)
+
+	hash, err := bcrypt.GenerateFromPassword(
+		[]byte("password123"),
+		bcrypt.DefaultCost,
+	)
+	if err != nil {
+		t.Fatalf("testisalasanan hajautus epäonnistui: %v", err)
+	}
+
+	createdUser, err := svc.repo.CreateUser(
+		context.Background(),
+		"user@example.com",
+		"Testi Käyttäjä",
+		string(hash),
+	)
+	if err != nil {
+		t.Fatalf("testikäyttäjän luonti epäonnistui: %v", err)
+	}
+
+	user, err := svc.GetUserByID(
+		context.Background(),
+		createdUser.ID,
+	)
+	if err != nil {
+		t.Fatalf("GetUserByID epäonnistui: %v", err)
+	}
+
+	if user == nil {
+		t.Fatal("GetUserByID palautti nil-käyttäjän")
+	}
+
+	if user.ID != createdUser.ID {
+		t.Errorf(
+			"odotettu ID '%s', saatiin '%s'",
+			createdUser.ID,
+			user.ID,
+		)
+	}
+
+	if user.Email != "user@example.com" {
+		t.Errorf(
+			"odotettu email 'user@example.com', saatiin '%s'",
+			user.Email,
+		)
+	}
 }
