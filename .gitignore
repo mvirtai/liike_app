@@ -17,3 +17,6 @@ coverage.out
 # OS generated files
 .DS_Store
 Thumbs.db
+
+.plans/*
+*.db
