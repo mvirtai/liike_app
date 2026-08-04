@@ -16,8 +16,6 @@ func TestUser_JSONMarshal_OmitsPasswordHash(t *testing.T) {
 		Email:        "test@example.com",
 		PasswordHash: "secret-hash",
 		Name:         "Testi Käyttäjä",
-		CreatedAt:    "2024-01-01T00:00:00Z",
-		UpdatedAt:    "2024-01-01T00:00:00Z",
 	}
 
 	data, err := json.Marshal(u)
