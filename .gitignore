@@ -18,5 +18,5 @@ coverage.out
 .DS_Store
 Thumbs.db
 
-.plans/*
+.plans
 *.db

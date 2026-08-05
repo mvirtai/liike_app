@@ -28,15 +28,15 @@ Teknologiat: **Go (Backend)**, **SQLite (Tietokanta)**, **React + TypeScript (Fr
   - Go-moduulin alustus (`go mod init liike_app`).
   - Arkkitehtuurirakenne (`cmd/server`, `internal/config`, `internal/domain`, `internal/repository`, `internal/service`, `internal/handler`).
   - HTTP-palvelimen käynnistys ja terveystarkastus-endpoint (`GET /api/v1/health`).
-- [ ] **Vaihe 2: Tietokanta-arkkitehtuuri, Migraatiot & Käyttäjä/Laji-skeemat** *(Meneillään - [phase_2_database_setup.md](file:///home/vivaldev/code/liike_app/.plans/phase_2_database_setup.md))*
+- [x] **Vaihe 2: Tietokanta-arkkitehtuuri, Migraatiot & Käyttäjä/Laji-skeemat** *(Valmis - [phase_2_database_setup.md](file:///home/vivaldev/code/liike_app/.plans/phase_2_database_setup.md))*
   - SQLite-yhteyspooli (`modernc.org/sqlite`).
   - Migraatiotyökalu ja tietokantataulut: `users`, `exercise_types`, `workouts`, `workout_sets`, `archery_scores`.
-- [ ] **Vaihe 3: Käyttäjähallinta & JWT-Autentikaatio (API)**
-  - `POST /api/v1/auth/register`, `POST /api/v1/auth/login`.
+- [x] **Vaihe 3: Käyttäjähallinta & JWT-Autentikaatio (API)** *(Valmis - [phase_3_auth_jwt.md](file:///home/vivaldev/code/liike_app/.plans/phase_3_auth_jwt.md))*
+  - `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `GET /api/v1/auth/me`.
   - JWT Auth Middleware suojaamaan treenirajapintoja.
-- [ ] **Vaihe 4: Suoritusten & Jousiammunnan REST API**
+- [ ] **Vaihe 4: Suoritusten & Jousiammunnan REST API** *(Meneillään - [phase_4_workouts_and_archery_api.md](file:///home/vivaldev/code/liike_app/.plans/phase_4_workouts_and_archery_api.md))*
   - CRUD-rajapinnat suorituksille ja lajeille.
-  - Jousiammunnan erikoistuloskirjauksen suorituslogiikka ja API.
+  - Jousiammunnan erikoistuloskirjauksen suorituslogiikka, yhteenvetolaskenta ja API.
 - [ ] **Vaihe 5: Frontend Alustus (React + TypeScript + Vite)**
 - [ ] **Vaihe 6: Frontend UI -Näkymät & Integraatio**
 - [ ] **Vaihe 7: Viimeistely, E2E-testaus & PR Story**

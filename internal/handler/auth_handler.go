@@ -7,7 +7,7 @@ import (
 
 	"liike_app/internal/middleware"
 	"liike_app/internal/repository"
-	service "liike_app/internal/services"
+	"liike_app/internal/service"
 )
 
 // AuthHandler sisältää auth-endpointtien käsittelijät.
@@ -129,4 +129,9 @@ func writeJSON(w http.ResponseWriter, statusCode int, v any) {
 	w.WriteHeader(statusCode)
 
 	_ = json.NewEncoder(w).Encode(v)
+}
+
+// writeJSONError kirjoittaa standardisoidun JSON-virhevasteen.
+func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
+	writeJSON(w, statusCode, map[string]string{"error": message})
 }

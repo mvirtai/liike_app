@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	service "liike_app/internal/services"
+	"liike_app/internal/service"
 )
 
 // contextKey on yksityinen tyyppi context-avaimille törmäysten välttämiseksi.
