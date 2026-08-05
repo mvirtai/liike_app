@@ -17,7 +17,7 @@ import (
 	"liike_app/internal/middleware"
 	"liike_app/internal/migrations"
 	"liike_app/internal/repository"
-	service "liike_app/internal/services"
+	"liike_app/internal/service"
 )
 
 func main() {
