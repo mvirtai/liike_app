@@ -130,3 +130,8 @@ func writeJSON(w http.ResponseWriter, statusCode int, v any) {
 
 	_ = json.NewEncoder(w).Encode(v)
 }
+
+// writeJSONError kirjoittaa standardisoidun JSON-virhevasteen.
+func writeJSONError(w http.ResponseWriter, statusCode int, message string) {
+	writeJSON(w, statusCode, map[string]string{"error": message})
+}
