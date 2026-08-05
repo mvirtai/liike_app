@@ -53,27 +53,21 @@ func main() {
 	// 3. Dependency Injection
 	//
 	// Rakennetaan riippuvuudet kerroksittain:
-	//
-	// Database
-	//    ↓
-	// Repository
-	//    ↓
-	// AuthService
-	//    ↓
-	// AuthHandler
-	//
-	// AuthMiddleware käyttää AuthServiceä JWT-tokenien
-	// validoimiseen.
+	// Database -> Repository -> Services -> Handlers -> Middleware
 	repo := repository.NewRepository(db)
 
 	authSvc := service.NewAuthService(
 		repo,
 		cfg.JWTSecret,
 	)
-
 	authHandler := handler.NewAuthHandler(authSvc)
-
 	authMiddleware := middleware.AuthMiddleware(authSvc)
+
+	exerciseTypeSvc := service.NewExerciseTypeService(repo)
+	exerciseTypeHandler := handler.NewExerciseTypeHandler(exerciseTypeSvc)
+
+	workoutSvc := service.NewWorkoutService(repo)
+	workoutHandler := handler.NewWorkoutHandler(workoutSvc)
 
 	// 4. Alusta HTTP ServeMux (Go 1.22+ reititys)
 	mux := http.NewServeMux()
@@ -84,10 +78,7 @@ func main() {
 		handler.HealthCheckHandler,
 	)
 
-	// 5. Julkiset auth-reitit
-	//
-	// Näihin ei tarvita JWT-tokenia.
-
+	// 5. Julkiset auth-reitit (ei tarvita JWT-tokenia)
 	mux.HandleFunc(
 		"POST /api/v1/auth/register",
 		authHandler.Register,
@@ -98,13 +89,7 @@ func main() {
 		authHandler.Login,
 	)
 
-	// 6. Suojattu auth-reitti
-	//
-	// AuthMiddleware tarkistaa:
-	//
-	// Authorization: Bearer <JWT>
-	//
-	// ja lisää käyttäjän ID:n request contextiin.
+	// 6. Suojatut auth-reitit
 	mux.Handle(
 		"GET /api/v1/auth/me",
 		authMiddleware(
@@ -112,7 +97,58 @@ func main() {
 		),
 	)
 
-	// 7. HTTP-palvelimen asetukset ja aikakatkaisut
+	// 7. Harjoitusmuotojen reitit (suojatut)
+	mux.Handle(
+		"GET /api/v1/exercise-types",
+		authMiddleware(
+			http.HandlerFunc(exerciseTypeHandler.List),
+		),
+	)
+
+	mux.Handle(
+		"GET /api/v1/exercise-types/{id}",
+		authMiddleware(
+			http.HandlerFunc(exerciseTypeHandler.GetByID),
+		),
+	)
+
+	// 8. Suoritusten & Jousiammunnan reitit (suojatut)
+	mux.Handle(
+		"POST /api/v1/workouts",
+		authMiddleware(
+			http.HandlerFunc(workoutHandler.Create),
+		),
+	)
+
+	mux.Handle(
+		"GET /api/v1/workouts",
+		authMiddleware(
+			http.HandlerFunc(workoutHandler.List),
+		),
+	)
+
+	mux.Handle(
+		"GET /api/v1/workouts/{id}",
+		authMiddleware(
+			http.HandlerFunc(workoutHandler.GetByID),
+		),
+	)
+
+	mux.Handle(
+		"DELETE /api/v1/workouts/{id}",
+		authMiddleware(
+			http.HandlerFunc(workoutHandler.Delete),
+		),
+	)
+
+	mux.Handle(
+		"POST /api/v1/workouts/{id}/archery-scores",
+		authMiddleware(
+			http.HandlerFunc(workoutHandler.AddArcheryScores),
+		),
+	)
+
+	// 9. HTTP-palvelimen asetukset ja aikakatkaisut
 	server := &http.Server{
 		Addr: fmt.Sprintf(
 			":%s",
@@ -124,7 +160,7 @@ func main() {
 		IdleTimeout:  60 * time.Second,
 	}
 
-	// 8. Käynnistä palvelin omassa goroutinessaan
+	// 10. Käynnistä palvelin omassa goroutinessaan
 	go func() {
 		log.Printf(
 			"[SERVER] Liike App backend käynnissä osoitteessa http://localhost%s",
@@ -140,7 +176,7 @@ func main() {
 		}
 	}()
 
-	// 9. Hallittu sammutus
+	// 11. Hallittu sammutus
 	stop := make(chan os.Signal, 1)
 
 	signal.Notify(
