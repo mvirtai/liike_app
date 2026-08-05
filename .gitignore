@@ -18,5 +18,6 @@ coverage.out
 .DS_Store
 Thumbs.db
 
-.plans/*
+.plans
 *.db
+internal/services/exercise_type_service.go
