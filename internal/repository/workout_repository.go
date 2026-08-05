@@ -264,7 +264,7 @@ func (r *Repository) UpdateWorkout(ctx context.Context, w *domain.Workout) error
 	query := `
 		UPDATE workouts
 		SET start_time = ?, end_time = ?, duration_seconds = ?, distance_km = ?,
-			avg_heart_rate = ?, calories_burned = ?, notes = ?, updated_at = ?,
+			avg_heart_rate = ?, calories_burned = ?, notes = ?, updated_at = ?
 		WHERE id = ? AND user_id = ?
 	`
 	res, err := r.db.ExecContext(ctx, query,
@@ -348,7 +348,7 @@ func (r *Repository) AddArcheryScores(ctx context.Context, workoutID string, sco
 
 		insertScore := `
 		  INSERT INTO archery_scores (id, workout_id, end_number, arrow_number, score_value, is_x, created_at)
-		  VALUE (?, ?, ?, ?, ?, ?, ?)
+		  VALUES (?, ?, ?, ?, ?, ?, ?)
 		`
 		_, err := tx.ExecContext(ctx, insertScore, sc.ID, sc.WorkoutID, sc.EndNumber, sc.ArrowNumber, sc.ScoreValue, sc.IsX, sc.CreatedAt)
 		if err != nil {
