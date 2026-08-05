@@ -20,4 +20,3 @@ Thumbs.db
 
 .plans
 *.db
-internal/services/exercise_type_service.go
